@@ -9,7 +9,7 @@ export const maxDuration = 30;
 const isOpenAIConfigured = !!process.env.OPENAI_API_KEY;
 const isExaConfigured = !!process.env.EXA_API_KEY;
 
-const pharmaRegex = /(dr\s?reddy|drreddy|sun\s?pharma|sunpharma|cipla|pharma|pharmaceutical|drug|medicine|tablet|capsule|dosage|clinical|trial|fda|ema)/i;
+const pharmaRegex = /(dr\s?reddy|drreddy|sun\s?pharma|sunpharma|cipla|pharma|pharmaceutical|drug|medicine|tablet|capsule|dosage|clinical|trial|fda|ema|revenue|financial|earnings|profit|income|balance sheet|cash flow|ebitda|margin|sales|growth|segment|product|pipeline|market|share|competitor|analysis|quarterly|annual|fy|fiscal|q[1-4]|financial statements?)/i;
 const webSearchRegex = /(search|find|look up|latest|news|current|today|recent|what is happening|trending|update)/i;
 
 export async function POST(req: Request) {
@@ -52,14 +52,18 @@ export async function POST(req: Request) {
     let reply = "";
     let context = "";
 
+    // Determine the Pinecone namespace based on company mentioned
+    let namespace = "default";
+    if (userQuery.toLowerCase().includes("cipla")) {
+      namespace = "cipla";
+    } else if (/sun\s?pharma|sunpharma/i.test(userQuery)) {
+      namespace = "sunpharma";
+    } else if (/dr\s?reddy|drreddy/i.test(userQuery)) {
+      namespace = "drreddy";
+    }
+
     if (isPharmaQuery && isPineconeConfigured) {
       try {
-        const namespace = userQuery.toLowerCase().includes("cipla")
-          ? "cipla"
-          : /sun\s?pharma|sunpharma/i.test(userQuery)
-          ? "sunpharma"
-          : "drreddy";
-
         const search = await searchPinecone(userQuery, namespace);
         const matches = search?.matches ?? [];
         context = matches
