@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyAI3",
-  description: "MyAI3",
+  title: "PillMetrix",
+  description: "PillMetrix - AI Research Assistant for Pharmaceutical Companies",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
