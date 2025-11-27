@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import Exa from 'exa-js';
 
-const exa = new Exa(process.env.EXA_API_KEY);
+export const isExaConfigured = !!process.env.EXA_API_KEY;
 
 export const webSearch = tool({
   description: 'Search the web for up-to-date information',
@@ -10,7 +10,13 @@ export const webSearch = tool({
     query: z.string().min(1).describe('The search query'),
   }),
   execute: async ({ query }) => {
+    if (!isExaConfigured) {
+      console.warn('Exa API key not configured, skipping web search');
+      return [];
+    }
+
     try {
+      const exa = new Exa(process.env.EXA_API_KEY);
       const { results } = await exa.search(query, {
         contents: {
           text: true,
