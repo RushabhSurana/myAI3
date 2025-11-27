@@ -1,33 +1,46 @@
-import { Pinecone } from '@pinecone-database/pinecone';
-import { PINECONE_TOP_K } from '@/config';
-import { searchResultsToChunks, getSourcesFromChunks, getContextFromSources } from '@/lib/sources';
-import { PINECONE_INDEX_NAME } from '@/config';
+import { Pinecone } from "@pinecone-database/pinecone";
+import OpenAI from "openai";
 
-if (!process.env.PINECONE_API_KEY) {
-    throw new Error('PINECONE_API_KEY is not set');
-}
+// Resolve Pinecone configuration from env with a small typo fallback for host.
+const apiKey = process.env.PINECONE_API_KEY;
+const indexName = process.env.PINECONE_INDEX_NAME ?? process.env.PINECONE_INDEX;
+const host = process.env.PINECONE_HOST ?? process.env.PINECODE_HOST;
 
-export const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY,
+if (!apiKey) throw new Error("Missing PINECONE_API_KEY");
+if (!indexName) throw new Error("Missing PINECONE_INDEX_NAME (or PINECONE_INDEX)");
+
+export const pineconeClient = new Pinecone({ apiKey });
+
+// If a host is provided (serverless), use it; otherwise let the SDK resolve it.
+export const pineconeIndex = host
+  ? pineconeClient.index(indexName, host)
+  : pineconeClient.index(indexName);
+
+// Default namespace used across the app.
+export const pineconeNamespace = pineconeIndex.namespace("default");
+
+// Shared OpenAI client for Pinecone RAG helpers.
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const pineconeIndex = pinecone.Index(PINECONE_INDEX_NAME);
+/**
+ * Perform a Pinecone vector search for the given query in the specified namespace.
+ * Returns the raw Pinecone response for downstream context handling.
+ */
+export async function searchPinecone(query: string, namespace = "default") {
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-large",
+    input: query,
+  });
 
-export async function searchPinecone(
-    query: string,
-): Promise<string> {
-    const results = await pineconeIndex.namespace('default').searchRecords({
-        query: {
-            inputs: {
-                text: query,
-            },
-            topK: PINECONE_TOP_K,
-        },
-        fields: ['text', 'pre_context', 'post_context', 'source_url', 'source_description', 'source_type', 'order'],
-    });
+  const vector = embedding.data[0].embedding;
 
-    const chunks = searchResultsToChunks(results);
-    const sources = getSourcesFromChunks(chunks);
-    const context = getContextFromSources(sources);
-    return `< results > ${context} </results>`;
+  const response = await pineconeIndex.namespace(namespace).query({
+    vector,
+    topK: 8,
+    includeMetadata: true,
+  });
+
+  return response;
 }

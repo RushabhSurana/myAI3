@@ -1,83 +1,110 @@
-
-import { streamText, UIMessage, convertToModelMessages, stepCountIs, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
-import { MODEL } from '@/config';
-import { SYSTEM_PROMPT } from '@/prompts';
-import { isContentFlagged } from '@/lib/moderation';
-import { webSearch } from './tools/web-search';
-import { vectorDatabaseSearch } from './tools/search-vector-database';
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import { SYSTEM_PROMPT } from "@/prompts";
+import { searchPinecone } from "@/lib/pinecone";
 
 export const maxDuration = 30;
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const companyRegex = /(dr\s?reddy|drreddy|sun\s?pharma|sunpharma|cipla)/i;
+
 export async function POST(req: Request) {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+  try {
+    const { messages } = await req.json();
 
-    const latestUserMessage = messages
-        .filter(msg => msg.role === 'user')
-        .pop();
+    const normalizedMessages = (messages || []).map((m: any) => {
+      let content = "";
+      if (typeof m.content === "string") content = m.content;
+      else if (Array.isArray(m.content)) {
+        const t = m.content.find((p: any) => p.type === "text");
+        content = t?.text ?? "";
+      } else if (Array.isArray(m.parts)) {
+        const t = m.parts.find((p: any) => p.type === "text");
+        content = t?.text ?? "";
+      }
+      return { ...m, content: (content || "").trim() };
+    });
 
-    if (latestUserMessage) {
-        const textParts = latestUserMessage.parts
-            .filter(part => part.type === 'text')
-            .map(part => 'text' in part ? part.text : '')
-            .join('');
+    const latestUser = [...normalizedMessages].reverse().find((m: any) => m.role === "user");
+    const userQuery = latestUser?.content || "";
 
-        if (textParts) {
-            const moderationResult = await isContentFlagged(textParts);
-
-            if (moderationResult.flagged) {
-                const stream = createUIMessageStream({
-                    execute({ writer }) {
-                        const textId = 'moderation-denial-text';
-
-                        writer.write({
-                            type: 'start',
-                        });
-
-                        writer.write({
-                            type: 'text-start',
-                            id: textId,
-                        });
-
-                        writer.write({
-                            type: 'text-delta',
-                            id: textId,
-                            delta: moderationResult.denialMessage || "Your message violates our guidelines. I can't answer that.",
-                        });
-
-                        writer.write({
-                            type: 'text-end',
-                            id: textId,
-                        });
-
-                        writer.write({
-                            type: 'finish',
-                        });
-                    },
-                });
-
-                return createUIMessageStreamResponse({ stream });
-            }
-        }
+    if (!userQuery) {
+      return NextResponse.json({
+        role: "assistant",
+        content: "Please enter a message.",
+      });
     }
 
-    const result = streamText({
-        model: MODEL,
-        system: SYSTEM_PROMPT,
-        messages: convertToModelMessages(messages),
-        tools: {
-            webSearch,
-            vectorDatabaseSearch,
-        },
-        stopWhen: stepCountIs(10),
-        providerOptions: {
-            openai: {
-                reasoningSummary: 'auto',
-                reasoningEffort: 'low',
-                parallelToolCalls: false,
-            }
-        }
-    });
+    const isCompanyQuery = companyRegex.test(userQuery);
+    let reply = "";
 
-    return result.toUIMessageStreamResponse({
-        sendReasoning: true,
+    if (isCompanyQuery) {
+      try {
+        const namespace = userQuery.includes("cipla")
+          ? "cipla"
+          : /sun\s?pharma|sunpharma/i.test(userQuery)
+          ? "sunpharma"
+          : "drreddy";
+
+        const search = await searchPinecone(userQuery, namespace);
+        const matches = search?.matches ?? [];
+        const context = matches
+          .map(m => (m.metadata as any)?.text ?? "")
+          .filter(Boolean)
+          .join("\n\n");
+
+        if (!context.trim()) {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: userQuery },
+            ],
+          });
+          reply = completion.choices[0]?.message?.content || "";
+        } else {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "assistant", content: "Retrieved context:\n" + context },
+              { role: "user", content: userQuery },
+            ],
+          });
+          reply = completion.choices[0]?.message?.content || "";
+        }
+      } catch (e) {
+        console.error("RAG path failed, falling back to base model:", e);
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userQuery },
+          ],
+        });
+        reply = completion.choices[0]?.message?.content || "";
+      }
+    } else {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userQuery },
+        ],
+      });
+      reply = completion.choices[0]?.message?.content || "";
+    }
+
+    return NextResponse.json({
+      role: "assistant",
+      content: reply,
     });
+  } catch (err) {
+    console.error("Chat route error:", err);
+    return NextResponse.json({
+      role: "assistant",
+      content: "Something went wrong. Please try again.",
+    });
+  }
 }

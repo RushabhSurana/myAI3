@@ -102,12 +102,8 @@ export default function Chat() {
       const welcomeMessage: UIMessage = {
         id: `welcome-${Date.now()}`,
         role: "assistant",
-        parts: [
-          {
-            type: "text",
-            text: WELCOME_MESSAGE,
-          },
-        ],
+        content:
+          "Welcome to PILLMETRIX. Ask me about pharma companies, financials, and I’ll ground answers in your documents.",
       };
       setMessages([welcomeMessage]);
       saveMessagesToStorage([welcomeMessage], {});
@@ -123,7 +119,46 @@ export default function Chat() {
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    sendMessage({ text: data.message });
+    const userMessage = data.message.trim();
+    if (!userMessage) return;
+
+    // Append to local UI state in the expected format
+    const userMsg: UIMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: userMessage,
+    };
+    setMessages(prev => [...prev, userMsg]);
+
+    // Send to backend with exact { role, content } shape and append assistant response when returned
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [...messages, userMsg],
+      }),
+    })
+      .then(async res => {
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          return res.json();
+        }
+        const text = await res.text();
+        return { role: "assistant", content: text };
+      })
+      .then(data => {
+        if (!data) return;
+        const assistantMsg: UIMessage = {
+          id: data.id || crypto.randomUUID(),
+          role: data.role || "assistant",
+          content: data.content || "",
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+      })
+      .catch(err => {
+        console.error("Chat request failed:", err);
+      });
+
     form.reset();
   }
 
@@ -137,28 +172,25 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex h-screen items-center justify-center font-sans dark:bg-black">
-      <main className="w-full dark:bg-black h-screen relative">
-        <div className="fixed top-0 left-0 right-0 z-50 bg-linear-to-b from-background via-background/50 to-transparent dark:bg-black overflow-visible pb-16">
+    <div className="flex h-screen items-center justify-center font-sans bg-[#F5F7FA] text-[#111]">
+      <main className="w-full h-screen relative">
+        <div className="fixed top-0 left-0 right-0 z-50 overflow-visible pb-10">
           <div className="relative overflow-visible">
             <ChatHeader>
-              <ChatHeaderBlock />
-              <ChatHeaderBlock className="justify-center items-center">
-                <Avatar
-                  className="size-8 ring-1 ring-primary"
-                >
-                  <AvatarImage src="/logo.png" />
-                  <AvatarFallback>
-                    <Image src="/logo.png" alt="Logo" width={36} height={36} />
-                  </AvatarFallback>
-                </Avatar>
-                <p className="tracking-tight">Chat with {AI_NAME}</p>
+              <ChatHeaderBlock className="justify-center items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#0fb8ad] to-[#1fc8db] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                  PM
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <p className="text-lg font-semibold tracking-tight">PILLMETRIX</p>
+                  <p className="text-xs text-[#555]">Created by Rushabh Surana</p>
+                </div>
               </ChatHeaderBlock>
               <ChatHeaderBlock className="justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="cursor-pointer"
+                  className="cursor-pointer rounded-full border border-[#ddd] text-[#111] shadow-sm"
                   onClick={clearChat}
                 >
                   <Plus className="size-4" />
@@ -186,10 +218,9 @@ export default function Chat() {
             )}
           </div>
         </div>
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-linear-to-t from-background via-background/50 to-transparent dark:bg-black overflow-visible pt-13">
-          <div className="w-full px-5 pt-5 pb-1 items-center flex justify-center relative overflow-visible">
-            <div className="message-fade-overlay" />
-            <div className="max-w-3xl w-full">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-transparent overflow-visible pt-6 pb-4">
+          <div className="w-full px-5 items-center flex justify-center relative overflow-visible">
+            <div className="max-w-[750px] w-full">
               <form id="chat-form" onSubmit={form.handleSubmit(onSubmit)}>
                 <FieldGroup>
                   <Controller
@@ -204,7 +235,7 @@ export default function Chat() {
                           <Input
                             {...field}
                             id="chat-form-message"
-                            className="h-15 pr-15 pl-5 bg-card rounded-[20px]"
+                            className="h-14 pr-14 pl-5 bg-white rounded-full border border-[#ddd] shadow-sm text-base"
                             placeholder="Type your message here..."
                             disabled={status === "streaming"}
                             aria-invalid={fieldState.invalid}
@@ -218,12 +249,12 @@ export default function Chat() {
                           />
                           {(status == "ready" || status == "error") && (
                             <Button
-                              className="absolute right-3 top-3 rounded-full"
+                              className="absolute right-2.5 top-2.5 rounded-full bg-[#19c3db] hover:bg-[#17b2c7] text-white shadow-sm"
                               type="submit"
                               disabled={!field.value.trim()}
                               size="icon"
                             >
-                              <ArrowUp className="size-4" />
+                              <ArrowUp className="size-5" />
                             </Button>
                           )}
                           {(status == "streaming" || status == "submitted") && (
@@ -246,7 +277,7 @@ export default function Chat() {
             </div>
           </div>
           <div className="w-full px-5 py-3 items-center flex justify-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {OWNER_NAME}&nbsp;<Link href="/terms" className="underline">Terms of Use</Link>&nbsp;Powered by&nbsp;<Link href="https://ringel.ai/" className="underline">Ringel.AI</Link>
+            © 2025 PILLMETRIX • Built by Rushabh Surana
           </div>
         </div>
       </main>

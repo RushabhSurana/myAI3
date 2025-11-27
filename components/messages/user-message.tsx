@@ -2,16 +2,13 @@ import { UIMessage } from "ai";
 import { Response } from "@/components/ai-elements/response";
 
 export function UserMessage({ message }: { message: UIMessage }) {
+    const text = message?.content || "";
+
     return (
-        <div className="whitespace-pre-wrap w-full flex justify-end">
-            <div className="max-w-lg w-fit px-4 py-3 rounded-[20px] bg-neutral-100">
-                <div className="text-sm">
-                    {message.parts.map((part, i) => {
-                        switch (part.type) {
-                            case "text":
-                                return <Response key={`${message.id}-${i}`}>{part.text}</Response>;
-                        }
-                    })}
+        <div className="whitespace-pre-wrap w-full flex justify-end animate-fade-in">
+            <div className="max-w-xl w-fit px-4 py-3 rounded-2xl bg-gradient-to-br from-[#1fc8db] to-[#2cb5e8] text-white shadow-md">
+                <div className="text-sm leading-relaxed">
+                    <Response key={message.id}>{text}</Response>
                 </div>
             </div>
         </div>

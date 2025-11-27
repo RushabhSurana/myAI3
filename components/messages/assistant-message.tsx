@@ -4,47 +4,14 @@ import { ReasoningPart } from "./reasoning-part";
 import { ToolCall, ToolResult } from "./tool-call";
 
 export function AssistantMessage({ message, status, isLastMessage, durations, onDurationChange }: { message: UIMessage; status?: string; isLastMessage?: boolean; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
-    return (
-        <div className="w-full">
-            <div className="text-sm flex flex-col gap-4">
-                {message.parts.map((part, i) => {
-                    const isStreaming = status === "streaming" && isLastMessage && i === message.parts.length - 1;
-                    const durationKey = `${message.id}-${i}`;
-                    const duration = durations?.[durationKey];
+    const text = message?.content || "";
 
-                    if (part.type === "text") {
-                        return <Response key={`${message.id}-${i}`}>{part.text}</Response>;
-                    } else if (part.type === "reasoning") {
-                        return (
-                            <ReasoningPart
-                                key={`${message.id}-${i}`}
-                                part={part}
-                                isStreaming={isStreaming}
-                                duration={duration}
-                                onDurationChange={onDurationChange ? (d) => onDurationChange(durationKey, d) : undefined}
-                            />
-                        );
-                    } else if (
-                        part.type.startsWith("tool-") || part.type === "dynamic-tool"
-                    ) {
-                        if ('state' in part && part.state === "output-available") {
-                            return (
-                                <ToolResult
-                                    key={`${message.id}-${i}`}
-                                    part={part as unknown as ToolResultPart}
-                                />
-                            );
-                        } else {
-                            return (
-                                <ToolCall
-                                    key={`${message.id}-${i}`}
-                                    part={part as unknown as ToolCallPart}
-                                />
-                            );
-                        }
-                    }
-                    return null;
-                })}
+    return (
+        <div className="w-full animate-fade-in">
+            <div className="text-sm flex flex-col gap-4">
+                <div className="max-w-xl w-fit px-4 py-3 rounded-2xl bg-white text-[#111] border border-[#e5e5e5] shadow-sm">
+                    <Response key={message.id}>{text}</Response>
+                </div>
             </div>
         </div>
     )

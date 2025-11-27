@@ -15,14 +15,33 @@ export function MessageWall({ messages, status, durations, onDurationChange }: {
         scrollToBottom();
     }, [messages]);
 
+    if (!Array.isArray(messages)) {
+        return null;
+    }
+
+    const safeMessages = (messages || []).map(msg => ({
+        ...msg,
+        content: typeof msg.content === "string" ? msg.content : "",
+    }));
+
     return (
-        <div className="relative max-w-3xl w-full">
+        <div className="relative max-w-[750px] w-full mx-auto">
             <div className="relative flex flex-col gap-4">
-                {messages.map((message, messageIndex) => {
-                    const isLastMessage = messageIndex === messages.length - 1;
+                {safeMessages.map((message, messageIndex) => {
+                    const isLastMessage = messageIndex === safeMessages.length - 1;
                     return (
-                        <div key={message.id} className="w-full">
-                            {message.role === "user" ? <UserMessage message={message} /> : <AssistantMessage message={message} status={status} isLastMessage={isLastMessage} durations={durations} onDurationChange={onDurationChange} />}
+                        <div key={message.id || messageIndex} className="w-full">
+                            {message.role === "user" ? (
+                                <UserMessage message={message} />
+                            ) : (
+                                <AssistantMessage
+                                    message={message}
+                                    status={status}
+                                    isLastMessage={isLastMessage}
+                                    durations={durations}
+                                    onDurationChange={onDurationChange}
+                                />
+                            )}
                         </div>
                     );
                 })}
