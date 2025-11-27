@@ -17,7 +17,7 @@ import { MessageWall } from "@/components/messages/message-wall";
 import { ChatHeader } from "@/app/parts/chat-header";
 import { ChatHeaderBlock } from "@/app/parts/chat-header";
 import { useEffect, useState, useRef } from "react";
-import { CLEAR_CHAT_TEXT } from "@/config";
+import { CLEAR_CHAT_TEXT, WELCOME_MESSAGE } from "@/config";
 import { ClientOnly } from "@/components/client-only";
 import Image from "next/image";
 
@@ -83,7 +83,7 @@ export default function Chat() {
       const welcomeMessage: ChatMessage = {
         id: "welcome-message",
         role: "assistant",
-        content: "Welcome to PILLMETRIX. Ask me about pharma companies, financials, and I'll ground answers in your documents.",
+        content: WELCOME_MESSAGE,
       };
       setLocalMessages([welcomeMessage]);
     }
