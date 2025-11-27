@@ -1,139 +1,177 @@
-# MyAI3
+# PillMetrix
 
-A customizable AI chatbot assistant built with Next.js, featuring web search capabilities, vector database integration, and content moderation. This repository provides a complete foundation for deploying your own AI assistant with minimal technical knowledge required.
+**AI-Powered Research Assistant for Pharmaceutical Companies & Financial Analysis**
+
+PillMetrix is an intelligent chatbot that specializes in pharmaceutical industry research and financial analysis. It combines document-based knowledge retrieval (RAG) with real-time web search to provide comprehensive, data-grounded answers about pharmaceutical companies, financials, clinical trials, and market insights.
+
+![PillMetrix](./public/logo.png)
 
 ## Overview
 
-MyAI3 is an AI-powered chatbot that can:
+PillMetrix is an AI-powered research assistant that delivers intelligent, data-backed insights for pharmaceutical and financial professionals:
 
-- Answer questions using advanced language models
-- Search the web for up-to-date information
-- Search a vector database (Pinecone) for stored knowledge
-- Moderate content to ensure safe interactions
-- Provide citations and sources for its responses
+- **Pharmaceutical Intelligence**: Company analysis, clinical trials, regulatory information (FDA, EMA)
+- **Financial Analysis**: Revenue, earnings, profit margins, EBITDA, quarterly/annual performance
+- **Intelligent Routing**: Automatically routes queries to documents (Pinecone) or web search (Exa)
+- **Real-time Information**: Falls back to web search when documents lack current data
+- **Professional Insights**: Maintains equity research analyst tone with proper citations
+- **Content Moderation**: Ensures safe, appropriate interactions
 
-The application is designed to be easily customizable without deep technical expertise. Most changes you'll want to make can be done in just two files: `config.ts` and `prompts.ts`.
+The application is designed for pharmaceutical equity researchers, financial analysts, and investment professionals who need reliable, sourced information.
 
-This application is deployed on Vercel. After making changes to `config.ts` or `prompts.ts`, commit and push your changes to trigger a new deployment.
+## 🌟 Key Features
 
-## Key Files to Customize
+- **Intelligent Query Routing**: Automatically detects query type and routes to optimal data source
+- **Document-Based RAG**: Searches internal pharmaceutical research documents via Pinecone
+- **Real-time Web Search**: Falls back to Exa API for current information when needed
+- **Financial Analysis**: Recognizes and analyzes revenue, earnings, margins, and other metrics
+- **Company-Specific Intelligence**: Supports Dr. Reddy's, Cipla, Sun Pharma, and others
+- **Professional Tone**: Maintains equity research analyst voice throughout
+- **Source Attribution**: Natural citations without mentioning internal tools
+- **Clean UI**: Modern, responsive interface with message persistence
 
-### `config.ts` - Application Configuration
+## 🛠 Tech Stack
 
-This is the **primary file** you'll edit to customize your AI assistant. Located in the root directory, it contains:
+| Component | Technology |
+|-----------|-----------|
+| **Frontend** | Next.js 16 + Turbopack, TypeScript, Tailwind CSS, Radix UI |
+| **Backend** | Node.js 20, Vercel AI SDK |
+| **AI Model** | OpenAI GPT-4o-mini (configurable) |
+| **Vector DB** | Pinecone (RAG) |
+| **Web Search** | Exa API |
+| **Deployment** | Replit Autoscale / Vercel |
 
-- **AI Identity**: `AI_NAME` and `OWNER_NAME` - Change these to personalize your assistant
-- **Welcome Message**: `WELCOME_MESSAGE` - The greeting users see when they first open the chat
-- **UI Text**: `CLEAR_CHAT_TEXT` - The label for the "New Chat" button
-- **Moderation Messages**: Custom messages shown when content is flagged (sexual content, harassment, hate speech, violence, self-harm, illegal activities)
-- **Model Configuration**: `MODEL` - The AI model being used (currently set to OpenAI's GPT-5-mini)
-- **Vector Database Settings**: `PINECONE_TOP_K` and `PINECONE_INDEX_NAME` - Settings for your knowledge base search
+## 📋 Prerequisites
 
-**Example customization:**
+- **Node.js**: v20.x or higher
+- **npm**: v10.x or higher
+- **Required API Keys**:
+  - `OPENAI_API_KEY` - For AI model (Required)
+  - `EXA_API_KEY` - For web search (Optional)
+  - `PINECONE_API_KEY` - For vector database (Optional)
 
+## 🚀 Quick Start
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/yourusername/pillmetrix.git
+cd pillmetrix
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Configure Environment
+```bash
+# Create .env.local
+OPENAI_API_KEY=your_openai_key
+EXA_API_KEY=your_exa_key
+PINECONE_API_KEY=your_pinecone_key
+PINECONE_INDEX_NAME=your_index_name
+PINECONE_HOST=your_host_url
+```
+
+### 4. Run Development Server
+```bash
+npm run dev
+# App runs at http://localhost:5000
+```
+
+### 5. Build & Deploy
+```bash
+npm run build
+npm start
+```
+
+## 📁 Project Structure
+
+```
+pillmetrix/
+├── app/                    # Next.js App Router
+│   ├── api/chat/route.ts  # Chat API endpoint
+│   ├── page.tsx           # Chat interface
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   ├── ai-elements/       # AI-specific UI
+│   ├── messages/          # Message components
+│   └── ui/                # Reusable UI
+├── lib/
+│   ├── pinecone.ts        # Vector DB integration
+│   ├── moderation.ts      # Content moderation
+│   └── utils.ts           # Utilities
+├── public/
+│   ├── logo.png          # PillMetrix logo
+│   └── favicon.png       # Browser icon
+├── config.ts             # App configuration
+├── prompts.ts            # AI system prompts
+└── next.config.ts        # Next.js config
+```
+
+## ⚙️ Configuration
+
+### `config.ts` - Application Settings
 ```typescript
-export const AI_NAME = "Your Assistant Name";
-export const OWNER_NAME = "Your Name";
-export const WELCOME_MESSAGE = `Hello! I'm ${AI_NAME}, ready to help you.`;
+export const AI_NAME = "PillMetrix";  // Bot name
+export const OWNER_NAME = "Rushabh Surana";  // Creator
+export const MODEL = "gpt-4o-mini";  // AI model
+export const PINECONE_INDEX_NAME = "my-ai";  // Vector DB index
 ```
 
-### `prompts.ts` - AI Behavior and Instructions
+### `prompts.ts` - AI Behavior
+Defines how the AI responds:
+- Core capabilities and identity
+- Financial analysis instructions
+- Pharma research guidelines
+- Citation and sourcing rules
+- Professional tone guidelines
 
-This file controls **how your AI assistant behaves and responds**. Located in the root directory, it contains:
+### Query Routing
+Automatic intelligent routing:
+| Query Type | Trigger Keywords | Route |
+|-----------|------------------|-------|
+| Pharma | drug, clinical, FDA, medicine | Pinecone |
+| Financial | revenue, earnings, EBITDA | Pinecone |
+| Web Search | latest, news, trending | Exa API |
+| Fallback | No document match | Exa API |
 
-- **Identity Prompt**: Who the AI is and who created it
-- **Tool Calling Prompt**: Instructions for when to search the web or database
-- **Tone & Style**: How the AI should communicate (friendly, helpful, educational)
-- **Guardrails**: What the AI should refuse to discuss
-- **Citation Rules**: How to cite sources in responses
-- **Course Context**: Domain-specific instructions (currently mentions course syllabus)
+## 🔄 How It Works
 
-The prompts are modular, so you can edit individual sections without affecting others. The `SYSTEM_PROMPT` combines all these sections.
-
-**Example customization:**
-
-```typescript
-export const TONE_STYLE_PROMPT = `
-- Maintain a professional, business-focused tone.
-- Use clear, concise language suitable for executives.
-- Provide actionable insights and recommendations.
-`;
+```
+User Query
+  ↓
+Detect Type (Pharma/Financial/Web)
+  ↓
+Try Pinecone RAG First
+  ↓
+If No Results → Exa Web Search
+  ↓
+Combine Context + System Prompt
+  ↓
+OpenAI Generates Response
+  ↓
+Natural Citation (No Tool Mentions)
+  ↓
+Response to User
 ```
 
-## Project Structure
+## 🔐 API Keys & Secrets
 
-```text
-myAI3/
-├── app/                          # Next.js application files
-│   ├── api/chat/                 # Chat API endpoint
-│   │   ├── route.ts              # Main chat handler
-│   │   └── tools/                 # AI tools (web search, vector search)
-│   ├── page.tsx                  # Main chat interface (UI)
-│   ├── parts/                    # UI components
-│   └── terms/                    # Terms of Use page
-├── components/                    # React components
-│   ├── ai-elements/              # AI-specific UI components
-│   ├── messages/                 # Message display components
-│   └── ui/                       # Reusable UI components
-├── lib/                          # Utility libraries
-│   ├── moderation.ts             # Content moderation logic
-│   ├── pinecone.ts               # Vector database integration
-│   ├── sources.ts                # Source/citation handling
-│   └── utils.ts                  # General utilities
-├── types/                        # TypeScript type definitions
-├── config.ts                     # ⭐ MAIN CONFIGURATION FILE
-├── prompts.ts                    # ⭐ AI BEHAVIOR CONFIGURATION
-└── package.json                  # Dependencies and scripts
-```
+Store securely in your deployment platform (Replit Secrets, Vercel Env Vars):
 
-## Important Files Explained
+| Key | Provider | Purpose | Required |
+|-----|----------|---------|----------|
+| `OPENAI_API_KEY` | [OpenAI](https://platform.openai.com/api-keys) | AI Model & Moderation | ✅ Yes |
+| `EXA_API_KEY` | [Exa](https://dashboard.exa.ai/) | Web Search | Optional |
+| `PINECONE_API_KEY` | [Pinecone](https://app.pinecone.io/) | Vector DB | Optional |
+| `PINECONE_INDEX_NAME` | Pinecone | Index Name | If using |
+| `PINECONE_HOST` | Pinecone | Host URL | If using |
 
-### Core Application Files
-
-- **`app/api/chat/route.ts`**: The main API endpoint that handles chat requests. It processes messages, checks moderation, and calls the AI model with tools.
-
-- **`app/page.tsx`**: The main user interface. This is what users see and interact with. It handles the chat interface, message display, and user input.
-
-- **`app/api/chat/tools/web-search.ts`**: Enables the AI to search the web using Exa API. You can modify search parameters here (currently returns 3 results).
-
-- **`app/api/chat/tools/search-vector-database.ts`**: Enables the AI to search your Pinecone vector database for stored knowledge.
-
-### UI Components
-
-- **`components/messages/message-wall.tsx`**: Displays the conversation history
-- **`components/messages/assistant-message.tsx`**: Renders AI responses, including tool calls and reasoning
-- **`components/messages/tool-call.tsx`**: Shows when the AI is using tools (searching web, etc.)
-- **`components/ai-elements/response.tsx`**: Formats and displays AI text responses with markdown support
-
-### Library Files
-
-- **`lib/moderation.ts`**: Handles content moderation using OpenAI's moderation API. Checks user messages for inappropriate content before processing.
-
-- **`lib/pinecone.ts`**: Manages connections to Pinecone vector database. Handles searching your knowledge base.
-
-- **`lib/sources.ts`**: Processes search results and formats them for the AI, including citation handling.
-
-### Configuration Files
-
-- **`env.template`**: Template for environment variables. These need to be configured in your Vercel project settings.
-
-- **`app/terms/page.tsx`**: Terms of Use page. Uses `OWNER_NAME` from `config.ts`. Update this file if you need to modify legal terms.
-
-## Environment Setup (Vercel)
-
-Configure environment variables in your Vercel project settings (Settings → Environment Variables). Add the following:
-
-- `OPENAI_API_KEY` - Required for AI model and moderation
-- `EXA_API_KEY` - Optional, for web search functionality
-- `PINECONE_API_KEY` - Optional, for vector database search
-
-**Where to get API keys:**
-
-- **OpenAI**: <https://platform.openai.com/api-keys> (required)
-- **Exa**: <https://dashboard.exa.ai/> (optional)
-- **Pinecone**: <https://app.pinecone.io/> (optional)
-
-**Note**: Only `OPENAI_API_KEY` is strictly required. The others enable additional features.
+**Get API Keys:**
+1. OpenAI: Create account → API Keys → Generate key
+2. Exa: Sign up → Dashboard → API key
+3. Pinecone: Create account → Create index → Get credentials
 
 ## Customization Guide
 
