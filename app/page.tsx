@@ -19,6 +19,7 @@ import { ChatHeaderBlock } from "@/app/parts/chat-header";
 import { useEffect, useState, useRef } from "react";
 import { CLEAR_CHAT_TEXT } from "@/config";
 import { ClientOnly } from "@/components/client-only";
+import Image from "next/image";
 
 const formSchema = z.object({
   message: z
@@ -183,9 +184,13 @@ export default function Chat() {
           <div className="relative overflow-visible">
             <ChatHeader>
               <ChatHeaderBlock className="justify-center items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#0fb8ad] to-[#1fc8db] flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                  PM
-                </div>
+                <Image 
+                  src="/logo.png" 
+                  alt="PILLMETRIX Logo" 
+                  width={48} 
+                  height={48}
+                  className="h-12 w-12 shadow-sm"
+                />
                 <div className="flex flex-col leading-tight">
                   <p className="text-lg font-semibold tracking-tight">PILLMETRIX</p>
                   <p className="text-xs text-[#555]">Created by Rushabh Surana</p>
