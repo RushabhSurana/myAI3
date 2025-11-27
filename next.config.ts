@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const replitDevDomain = process.env.REPLIT_DEV_DOMAIN || "";
+
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
@@ -9,10 +11,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "localhost",
     "127.0.0.1",
-    ".replit.dev",
-    ".riker.replit.dev",
-    ".repl.co"
-  ]
+    replitDevDomain,
+    `.${replitDevDomain}`,
+  ].filter(Boolean)
 };
 
 export default nextConfig;

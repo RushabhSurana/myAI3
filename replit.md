@@ -4,14 +4,19 @@
 This is a customizable AI chatbot assistant built with Next.js 16, featuring web search capabilities, vector database integration, and content moderation. The application enables AI-powered conversations with support for tool calling (web search, vector database search) and comprehensive content moderation.
 
 ## Recent Changes
-- **2024-11-27**: Fixed chat routing and API key handling
+- **2025-11-27**: Fixed hydration mismatches and improved client-side rendering
+  - Added ClientOnly wrapper component for proper SSR/CSR handling
+  - Fixed Input component default type to prevent hydration mismatch
+  - Improved dynamic dev origin configuration for Replit proxy
+  - Simplified message state management with consolidated initialization
+- **2025-11-27**: Fixed chat routing and API key handling
   - Made Pinecone and Exa integrations optional (app no longer crashes without them)
   - Implemented intelligent query routing:
     - Simple questions → OpenAI directly
     - Pharma-related queries → Pinecone RAG (if configured)
     - Web search queries → Exa API (if configured)
   - Added proper error handling for missing API keys
-- **2024-11-27**: Imported project to Replit environment
+- **2025-11-27**: Imported project to Replit environment
   - Configured Next.js to bind to 0.0.0.0:5000 for Replit proxy compatibility
   - Set up Next.js dev server workflow on port 5000
   - Configured deployment settings for autoscale deployment

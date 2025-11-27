@@ -12,17 +12,13 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useChat } from "@ai-sdk/react";
-import { ArrowUp, Eraser, Loader2, Plus, PlusIcon, Square } from "lucide-react";
+import { ArrowUp, Loader2, Plus, Square } from "lucide-react";
 import { MessageWall } from "@/components/messages/message-wall";
 import { ChatHeader } from "@/app/parts/chat-header";
 import { ChatHeaderBlock } from "@/app/parts/chat-header";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UIMessage } from "ai";
 import { useEffect, useState, useRef } from "react";
-import { AI_NAME, CLEAR_CHAT_TEXT, OWNER_NAME, WELCOME_MESSAGE } from "@/config";
-import Image from "next/image";
-import Link from "next/link";
+import { CLEAR_CHAT_TEXT } from "@/config";
+import { ClientOnly } from "@/components/client-only";
 
 const formSchema = z.object({
   message: z
@@ -33,12 +29,18 @@ const formSchema = z.object({
 
 const STORAGE_KEY = 'chat-messages';
 
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
 type StorageData = {
-  messages: UIMessage[];
+  messages: ChatMessage[];
   durations: Record<string, number>;
 };
 
-const loadMessagesFromStorage = (): { messages: UIMessage[]; durations: Record<string, number> } => {
+const loadMessagesFromStorage = (): { messages: ChatMessage[]; durations: Record<string, number> } => {
   if (typeof window === 'undefined') return { messages: [], durations: {} };
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -55,7 +57,7 @@ const loadMessagesFromStorage = (): { messages: UIMessage[]; durations: Record<s
   }
 };
 
-const saveMessagesToStorage = (messages: UIMessage[], durations: Record<string, number>) => {
+const saveMessagesToStorage = (messages: ChatMessage[], durations: Record<string, number>) => {
   if (typeof window === 'undefined') return;
   try {
     const data: StorageData = { messages, durations };
@@ -66,28 +68,32 @@ const saveMessagesToStorage = (messages: UIMessage[], durations: Record<string, 
 };
 
 export default function Chat() {
-  const [isClient, setIsClient] = useState(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
-  const welcomeMessageShownRef = useRef<boolean>(false);
-
-  const stored = typeof window !== 'undefined' ? loadMessagesFromStorage() : { messages: [], durations: {} };
-  const [initialMessages] = useState<UIMessage[]>(stored.messages);
-
-  const { messages, sendMessage, status, stop, setMessages } = useChat({
-    messages: initialMessages,
-  });
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
+    const stored = loadMessagesFromStorage();
     setDurations(stored.durations);
-    setMessages(stored.messages);
+    if (stored.messages.length > 0) {
+      setLocalMessages(stored.messages);
+    } else {
+      const welcomeMessage: ChatMessage = {
+        id: "welcome-message",
+        role: "assistant",
+        content: "Welcome to PILLMETRIX. Ask me about pharma companies, financials, and I'll ground answers in your documents.",
+      };
+      setLocalMessages([welcomeMessage]);
+    }
+    setIsInitialized(true);
   }, []);
 
   useEffect(() => {
-    if (isClient) {
-      saveMessagesToStorage(messages, durations);
+    if (isInitialized) {
+      saveMessagesToStorage(localMessages, durations);
     }
-  }, [durations, messages, isClient]);
+  }, [durations, localMessages, isInitialized]);
 
   const handleDurationChange = (key: string, duration: number) => {
     setDurations((prevDurations) => {
@@ -96,20 +102,6 @@ export default function Chat() {
       return newDurations;
     });
   };
-
-  useEffect(() => {
-    if (isClient && initialMessages.length === 0 && !welcomeMessageShownRef.current) {
-      const welcomeMessage: UIMessage = {
-        id: `welcome-${Date.now()}`,
-        role: "assistant",
-        content:
-          "Welcome to PILLMETRIX. Ask me about pharma companies, financials, and I’ll ground answers in your documents.",
-      };
-      setMessages([welcomeMessage]);
-      saveMessagesToStorage([welcomeMessage], {});
-      welcomeMessageShownRef.current = true;
-    }
-  }, [isClient, initialMessages.length, setMessages]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -120,22 +112,23 @@ export default function Chat() {
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     const userMessage = data.message.trim();
-    if (!userMessage) return;
+    if (!userMessage || isLoading) return;
 
-    // Append to local UI state in the expected format
-    const userMsg: UIMessage = {
+    const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: userMessage,
     };
-    setMessages(prev => [...prev, userMsg]);
+    
+    const updatedMessages = [...localMessages, userMsg];
+    setLocalMessages(updatedMessages);
+    setIsLoading(true);
 
-    // Send to backend with exact { role, content } shape and append assistant response when returned
     fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [...messages, userMsg],
+        messages: updatedMessages,
       }),
     })
       .then(async res => {
@@ -148,26 +141,38 @@ export default function Chat() {
       })
       .then(data => {
         if (!data) return;
-        const assistantMsg: UIMessage = {
+        const assistantMsg: ChatMessage = {
           id: data.id || crypto.randomUUID(),
           role: data.role || "assistant",
           content: data.content || "",
         };
-        setMessages(prev => [...prev, assistantMsg]);
+        setLocalMessages(prev => [...prev, assistantMsg]);
       })
       .catch(err => {
         console.error("Chat request failed:", err);
+        const errorMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "Sorry, something went wrong. Please try again.",
+        };
+        setLocalMessages(prev => [...prev, errorMsg]);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
 
     form.reset();
   }
 
   function clearChat() {
-    const newMessages: UIMessage[] = [];
-    const newDurations = {};
-    setMessages(newMessages);
-    setDurations(newDurations);
-    saveMessagesToStorage(newMessages, newDurations);
+    const welcomeMessage: ChatMessage = {
+      id: "welcome-message",
+      role: "assistant",
+      content: "Welcome to PILLMETRIX. Ask me about pharma companies, financials, and I'll ground answers in your documents.",
+    };
+    setLocalMessages([welcomeMessage]);
+    setDurations({});
+    saveMessagesToStorage([welcomeMessage], {});
     toast.success("Chat cleared");
   }
 
@@ -202,20 +207,25 @@ export default function Chat() {
         </div>
         <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-[88px] pb-[150px]">
           <div className="flex flex-col items-center justify-end min-h-full">
-            {isClient ? (
-              <>
-                <MessageWall messages={messages} status={status} durations={durations} onDurationChange={handleDurationChange} />
-                {status === "submitted" && (
-                  <div className="flex justify-start max-w-3xl w-full">
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex justify-center max-w-2xl w-full">
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              </div>
-            )}
+            <ClientOnly
+              fallback={
+                <div className="flex justify-center max-w-2xl w-full">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <MessageWall 
+                messages={localMessages as any} 
+                status={isLoading ? "streaming" : "ready"} 
+                durations={durations} 
+                onDurationChange={handleDurationChange} 
+              />
+              {isLoading && (
+                <div className="flex justify-start max-w-3xl w-full">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </ClientOnly>
           </div>
         </div>
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-transparent overflow-visible pt-6 pb-4">
@@ -237,7 +247,7 @@ export default function Chat() {
                             id="chat-form-message"
                             className="h-14 pr-14 pl-5 bg-white rounded-full border border-[#ddd] shadow-sm text-base"
                             placeholder="Type your message here..."
-                            disabled={status === "streaming"}
+                            disabled={isLoading}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
                             onKeyDown={(e) => {
@@ -247,7 +257,7 @@ export default function Chat() {
                               }
                             }}
                           />
-                          {(status == "ready" || status == "error") && (
+                          {!isLoading && (
                             <Button
                               className="absolute right-2.5 top-2.5 rounded-full bg-[#19c3db] hover:bg-[#17b2c7] text-white shadow-sm"
                               type="submit"
@@ -257,13 +267,11 @@ export default function Chat() {
                               <ArrowUp className="size-5" />
                             </Button>
                           )}
-                          {(status == "streaming" || status == "submitted") && (
+                          {isLoading && (
                             <Button
                               className="absolute right-2 top-2 rounded-full"
                               size="icon"
-                              onClick={() => {
-                                stop();
-                              }}
+                              type="button"
                             >
                               <Square className="size-4" />
                             </Button>
@@ -281,6 +289,6 @@ export default function Chat() {
           </div>
         </div>
       </main>
-    </div >
+    </div>
   );
 }
