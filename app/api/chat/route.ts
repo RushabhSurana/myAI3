@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     const isWebSearchQuery = webSearchRegex.test(userQuery);
     let reply = "";
     let context = "";
+    let usedWebSearch = false;
 
     // Determine the Pinecone namespace based on company mentioned
     let namespace = "default";
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
       namespace = "drreddy";
     }
 
+    // Try Pinecone RAG first for pharma/financial queries
     if (isPharmaQuery && isPineconeConfigured) {
       try {
         const search = await searchPinecone(userQuery, namespace);
@@ -73,16 +75,22 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error("RAG search failed:", e);
       }
-    } else if (isWebSearchQuery && isExaConfigured) {
+    }
+
+    // Fallback to web search if RAG didn't find relevant context or for web search queries
+    if ((!context.trim() || isWebSearchQuery) && isExaConfigured) {
       try {
         const exa = new Exa(process.env.EXA_API_KEY);
         const { results } = await exa.search(userQuery, {
           contents: { text: true },
           numResults: 3,
         });
-        context = results
-          .map(r => `Source: ${r.title}\nURL: ${r.url}\n${r.text?.slice(0, 500) || ""}`)
-          .join("\n\n---\n\n");
+        if (results.length > 0) {
+          context = results
+            .map(r => `Source: ${r.title}\nURL: ${r.url}\n${r.text?.slice(0, 500) || ""}`)
+            .join("\n\n---\n\n");
+          usedWebSearch = true;
+        }
       } catch (e) {
         console.error("Web search failed:", e);
       }
