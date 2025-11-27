@@ -107,11 +107,17 @@ export async function POST(req: Request) {
       });
     }
 
+    // Include recent conversation history (last 2-3 messages) for context
+    const recentMessages = normalizedMessages.slice(-4).map((m: any) => ({
+      role: m.role,
+      content: m.content || "",
+    }));
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         ...systemMessages,
-        { role: "user", content: userQuery },
+        ...recentMessages,
       ],
     });
 

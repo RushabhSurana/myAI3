@@ -35,7 +35,7 @@ export const OWNER_NAME = "FIN-X Team";
 
 export const CLEAR_CHAT_TEXT = "New chat";
 
-export const WELCOME_MESSAGE = `Hello! I'm FIN-X Pharma, your equity research assistant.`;
+export const WELCOME_MESSAGE = `I can provide insights on pharmaceutical companies like Dr. Reddy's, Cipla, Sun Pharma, and others, as well as analyze financial metrics, product pipelines, clinical trials, regulatory matters, and market positioning. If you have specific queries, feel free to ask!`;
 
 export const PINECONE_TOP_K = 40;
 export const PINECONE_INDEX_NAME = "my-ai";
