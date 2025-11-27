@@ -1,7 +1,12 @@
-import { UIMessage } from "ai";
 import { Response } from "@/components/ai-elements/response";
 
-export function UserMessage({ message }: { message: UIMessage }) {
+type Message = {
+  id: string;
+  role: string;
+  content: string;
+};
+
+export function UserMessage({ message }: { message: Message }) {
     const text = message?.content || "";
 
     return (

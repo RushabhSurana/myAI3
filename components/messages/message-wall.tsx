@@ -1,10 +1,14 @@
-import { UIMessage } from "ai";
 import { useEffect, useRef } from "react";
 import { UserMessage } from "./user-message";
 import { AssistantMessage } from "./assistant-message";
 
+type Message = {
+  id: string;
+  role: string;
+  content: string;
+};
 
-export function MessageWall({ messages, status, durations, onDurationChange }: { messages: UIMessage[]; status?: string; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
+export function MessageWall({ messages, status, durations, onDurationChange }: { messages: Message[]; status?: string; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -19,16 +23,11 @@ export function MessageWall({ messages, status, durations, onDurationChange }: {
         return null;
     }
 
-    const safeMessages = (messages || []).map(msg => ({
-        ...msg,
-        content: typeof msg.content === "string" ? msg.content : "",
-    }));
-
     return (
         <div className="relative max-w-[750px] w-full mx-auto">
             <div className="relative flex flex-col gap-4">
-                {safeMessages.map((message, messageIndex) => {
-                    const isLastMessage = messageIndex === safeMessages.length - 1;
+                {messages.map((message, messageIndex) => {
+                    const isLastMessage = messageIndex === messages.length - 1;
                     return (
                         <div key={message.id || messageIndex} className="w-full">
                             {message.role === "user" ? (

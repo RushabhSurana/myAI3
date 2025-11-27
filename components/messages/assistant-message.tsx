@@ -1,9 +1,14 @@
-import { UIMessage, ToolCallPart, ToolResultPart } from "ai";
 import { Response } from "@/components/ai-elements/response";
 import { ReasoningPart } from "./reasoning-part";
 import { ToolCall, ToolResult } from "./tool-call";
 
-export function AssistantMessage({ message, status, isLastMessage, durations, onDurationChange }: { message: UIMessage; status?: string; isLastMessage?: boolean; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
+type Message = {
+  id: string;
+  role: string;
+  content: string;
+};
+
+export function AssistantMessage({ message, status, isLastMessage, durations, onDurationChange }: { message: Message; status?: string; isLastMessage?: boolean; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
     const text = message?.content || "";
 
     return (

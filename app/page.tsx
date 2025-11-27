@@ -215,7 +215,7 @@ export default function Chat() {
               }
             >
               <MessageWall 
-                messages={localMessages as any} 
+                messages={localMessages} 
                 status={isLoading ? "streaming" : "ready"} 
                 durations={durations} 
                 onDurationChange={handleDurationChange} 
