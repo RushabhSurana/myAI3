@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: ["*"]
     }
-  }
+  },
+  allowedDevOrigins: ["*"]
 };
 
 export default nextConfig;
