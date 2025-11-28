@@ -290,7 +290,7 @@ export default function Chat() {
             </div>
           </div>
           <div className="w-full px-5 py-3 items-center flex justify-center text-xs text-muted-foreground">
-            © 2025 PILLMETRIX • Built by Rushabh Surana
+            © 2025 PILLMETRIX • Built by Rushabh Surana & Samakshi Garg
           </div>
         </div>
       </main>
