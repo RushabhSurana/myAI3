@@ -193,7 +193,6 @@ export default function Chat() {
                 />
                 <div className="flex flex-col leading-tight">
                   <p className="text-lg font-semibold tracking-tight">PILLMETRIX</p>
-                  <p className="text-xs text-[#555]">Created by Rushabh Surana</p>
                 </div>
               </ChatHeaderBlock>
               <ChatHeaderBlock className="justify-end">
